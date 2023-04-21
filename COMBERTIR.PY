@@ -12,4 +12,6 @@ tflite_model = converter.convert()
 with open('model.tflite', 'wb') as f:
     f.write(tflite_model)
 
+## sudo apt-get install xxd
+
 ## xxd -i model.tflite > model_data.cc

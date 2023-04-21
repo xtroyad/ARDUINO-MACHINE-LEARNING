@@ -21,7 +21,7 @@ AUTOTUNE = tf.data.AUTOTUNE
 batch_size = 32
 img_height = 100
 img_width = 100
-epochs = 100
+epochs = 50
 
 
 # -----------------------------------------------------------------------------------------
