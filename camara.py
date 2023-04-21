@@ -13,7 +13,7 @@ cap = cv2.VideoCapture(0)
 take_photo = False
 
 # Definir los nombres de las clases
-class_names =['Arandelas', 'Mariposas', 'Tornillos', 'Tuercas']
+class_names = ['Arandelas', 'Mariposas', 'Tornillos', 'Tuercas']
 
 # Definir el tamaño de las imágenes
 img_height, img_width = 100, 100
@@ -32,7 +32,7 @@ while True:
     if take_photo:
         # Mostrar la imagen preprocesada
         cv2.imshow('processed_image', img[0])
-        
+
         predictions = model.predict(img)
         score = tf.nn.softmax(predictions[0])
 

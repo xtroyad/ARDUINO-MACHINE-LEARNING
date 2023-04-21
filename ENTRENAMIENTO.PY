@@ -82,6 +82,7 @@ print(class_names)
 val_size = int(image_count * 0.2)
 train_ds = list_ds.skip(val_size)
 val_ds = list_ds.take(val_size)
+val_ds = list_ds.take(val_size)
 
 # -----------------------------------------------------------------------------------------
 
@@ -133,6 +134,7 @@ data_augmentation = keras.Sequential(
         layers.RandomZoom(0.1)
     ]
 )
+
 
 # -----------------------------------------------------------------------------------------
 # POSIBLES MODELOS PARA LA PLACA. ardu1 PINTA SER LA MEJOR DE MOMENTO. HAY PROBAR ARDU2 YA QUE ES ARDU1 PERO MAS LIGERO
@@ -190,6 +192,22 @@ ardu2 = Sequential([
     layers.Dense(num_classes, activation='softmax')
 ])
 
+
+ardu3 = Sequential([
+    layers.Rescaling(1./255, input_shape=(100, 100, 1)),
+    data_augmentation,
+    layers.Conv2D(32, 3, activation='relu'),
+    layers.MaxPooling2D(),
+    layers.Conv2D(64, 3, activation='relu'),
+    layers.MaxPooling2D(),
+    layers.Conv2D(128, 3, activation='relu'),
+    layers.MaxPooling2D(),
+    layers.Flatten(),
+    layers.Dropout(0.5),
+    layers.Dense(256, activation='relu'),
+    layers.Dropout(0.5),
+    layers.Dense(num_classes, activation='softmax')
+])
 
 
 # -----------------------------------------------------------------------------------------
