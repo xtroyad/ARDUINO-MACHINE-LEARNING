@@ -2,6 +2,8 @@
 # import os
 # os.environ["CUDA_VISIBLE_DEVICES"] = "0" # usar GPU 0
 
+from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.models import Sequential
 from tensorflow.keras import layers
 from tensorflow import keras
@@ -19,13 +21,12 @@ AUTOTUNE = tf.data.AUTOTUNE
 batch_size = 32
 img_height = 100
 img_width = 100
+epochs = 100
 
-data_augmentation = keras.Sequential(
-    [
-        layers.RandomFlip("horizontal"),
-        layers.RandomRotation(0.1)
-    ]
-)
+
+# -----------------------------------------------------------------------------------------
+# FUNCIONES AUXILIARES PARA PODER HACER UN DATASET DE UNA CARPETA DE FOTOS
+# -----------------------------------------------------------------------------------------
 
 def get_label(file_path):
     # Convierte la ruta del archivo en una lista de componentes de ruta
@@ -51,6 +52,8 @@ def process_path(file_path):
     return img, label
 
 # -----------------------------------------------------------------------------------------
+# PROCESANDO IMAGENES PARA CREAR UN DATASET
+# -----------------------------------------------------------------------------------------
 
 
 # Definimos la ruta de nuestro directorio de imágenes
@@ -70,6 +73,8 @@ list_ds = list_ds.shuffle(image_count, reshuffle_each_iteration=False)
 # Creamos el conjunto de clases que puede tener nuestro modelo
 class_names = np.array(sorted(
     [item.name for item in data_dir.glob('*') if item.name != "LICENSE.txt"]))
+
+print(class_names)
 
 # -----------------------------------------------------------------------------------------
 
@@ -102,132 +107,117 @@ def configure_for_performance(ds):
 train_ds = configure_for_performance(train_ds)
 val_ds = configure_for_performance(val_ds)
 
-# # Obtener un batch de imágenes y etiquetas
-# image_batch, label_batch = next(iter(train_ds))
-# -----------------------------------------------------------------------------------------
-# -----------------------------------------------------------------------------------------
+# #-----------------------------------------------------------------------------------------
+# # NORMALIZACION DE DATOS Y TRANFORMACION A LA ESCALA DE UN COLOR
+# #-----------------------------------------------------------------------------------------
 
-normalization_layer = tf.keras.layers.Rescaling(1./255)
 preprocessing_layer = tf.keras.layers.Lambda(
     lambda x: tf.image.rgb_to_grayscale(x))
-# ----------------------------------------------------------------------------------------
-#VIALIZAMOS 
-plt.figure(figsize=(10, 10))
-for images, labels in train_ds.take(1):
-  for i in range(9):
-    ax = plt.subplot(3, 3, i + 1)
-    plt.imshow(images[i].numpy().astype("uint8"))
-    plt.title(class_names[labels[i]])
-    plt.axis("off")
-plt.show()
-# ----------------------------------------------------------------------------------------
 
 # Aplicamos la capa de preprocesamiento y normalización al conjunto de entrenamiento
 train_ds = train_ds.map(lambda x, y: (preprocessing_layer(x), y))
 
-# ----------------------------------------------------------------------------------------
-#VIALIZAMOS 
-plt.figure(figsize=(10, 10))
-for images, labels in train_ds.take(1):
-    for i in range(9):
-        ax = plt.subplot(3, 3, i + 1)
-        plt.imshow(images[i].numpy().reshape(
-            (img_height, img_width)), cmap='gray')
-        plt.title(class_names[labels[i]])
-        plt.axis("off")
-plt.show()
-
-plt.figure(figsize=(10, 10))
-for images, _ in train_ds.take(1):
-    for i in range(9):
-        augmented_images = data_augmentation(images)
-        ax = plt.subplot(3, 3, i + 1)
-        plt.imshow(augmented_images[0].numpy().reshape(
-            (img_height, img_width)), cmap='gray')
-        plt.axis("off")
-plt.show()
-# ----------------------------------------------------------------------------------------
-
-train_ds = train_ds.map(lambda x, y: (normalization_layer(x), y))
 
 # Aplicamos la capa de preprocesamiento y normalización al conjunto de validación
 val_ds = val_ds.map(lambda x, y: (preprocessing_layer(x), y))
-val_ds = val_ds.map(lambda x, y: (normalization_layer(x), y))
 
 
 # -----------------------------------------------------------------------------------------
+# AUMENTO DE DATOS. ESTE ARGUMENTO COGE LAS FOTOS QUE YA TENEMOS Y LAS ROTA PARA DAR VARIEDAD
+# -----------------------------------------------------------------------------------------
+
+data_augmentation = keras.Sequential(
+    [
+        layers.RandomFlip("horizontal"),
+        layers.RandomRotation(0.1),
+        layers.RandomZoom(0.1)
+    ]
+)
+
+# -----------------------------------------------------------------------------------------
+# POSIBLES MODELOS PARA LA PLACA. ardu1 PINTA SER LA MEJOR DE MOMENTO. HAY PROBAR ARDU2 YA QUE ES ARDU1 PERO MAS LIGERO
+# -----------------------------------------------------------------------------------------
+
 num_classes = len(class_names)
-epochs = 50
-# -----------------------------------------------------------------------------------------
 
-model = Sequential([
+#POR PROBAR
+ardu = Sequential([
+    layers.Rescaling(1./255, input_shape=(img_height, img_width, 1)),
     data_augmentation,
-    layers.Conv2D(16, 3, padding='same', activation='relu'),
+    layers.Conv2D(32, 3, activation='relu'),
     layers.MaxPooling2D(),
-    layers.Conv2D(32, 3, padding='same', activation='relu'),
+    layers.Conv2D(64, 3, activation='relu'),
     layers.MaxPooling2D(),
-    layers.Conv2D(64, 3, padding='same', activation='relu'),
+    layers.Conv2D(128, 3, activation='relu'),
     layers.MaxPooling2D(),
-    layers.Flatten(),
-    layers.Dense(128, activation='relu'),
-    layers.Dense(num_classes)
-])
-# -----------------------------------------------------------------------------------------
-
-model2 = Sequential([
-    data_augmentation,
-    layers.Flatten(input_shape=(100, 100, 1)),
-    layers.Dense(150, activation='relu'),
-    layers.Dense(150, activation='relu'),
-    layers.Dense(4, activation='softmax')
-])
-# -----------------------------------------------------------------------------------------
-
-modelCNN = Sequential([
-    data_augmentation,
-    layers.Conv2D(32, (3, 3), activation='relu',
-                  input_shape=(100, 100, 1)),
-    layers.MaxPooling2D(2, 2),
-    layers.Conv2D(64, (3, 3), activation='relu'),
-    layers.MaxPooling2D(2, 2),
-    layers.Conv2D(128, (3, 3), activation='relu'),
-    layers.MaxPooling2D(2, 2),
-
-    layers.Flatten(),
-    layers.Dense(100, activation='relu'),
-    layers.Dense(4, activation='softmax')
-])
-# -----------------------------------------------------------------------------------------
-
-modelCNN2 = tf.keras.models.Sequential([
-    data_augmentation,
-    layers.Conv2D(32, (3, 3), activation='relu',
-                  input_shape=(100, 100, 1)),
-    layers.MaxPooling2D(2, 2),
-    layers.Conv2D(64, (3, 3), activation='relu'),
-    layers.MaxPooling2D(2, 2),
-    layers.Conv2D(128, (3, 3), activation='relu'),
-    layers.MaxPooling2D(2, 2),
-
     layers.Dropout(0.5),
     layers.Flatten(),
-    layers.Dense(250, activation='relu'),
-    layers.Dense(4, activation='softmax')
+    layers.Dense(256, activation='relu'),
+    layers.Dropout(0.5),
+    layers.Dense(num_classes, activation='softmax')
+])
+#LR= 0.001
+ardu1 = Sequential([
+    layers.Rescaling(1./255, input_shape=(100, 100, 1)),
+    data_augmentation,
+    layers.Conv2D(16, 5, activation='relu'),
+    layers.MaxPooling2D(),
+    layers.Conv2D(32, 5, activation='relu'),
+    layers.MaxPooling2D(),
+    layers.Conv2D(64, 5, activation='relu'),
+    layers.MaxPooling2D(),
+    layers.Dropout(0.5),
+    layers.Flatten(),
+    layers.Dense(128, activation='relu'),
+    layers.Dropout(0.5),
+    layers.Dense(num_classes, activation='softmax')
 ])
 
+#LR =0.002
+ardu2 = Sequential([
+    layers.Rescaling(1./255, input_shape=(64, 64, 1)),
+    data_augmentation,
+    layers.Conv2D(16, 3, activation='relu'),
+    layers.MaxPooling2D(),
+    layers.Conv2D(32, 3, activation='relu'),
+    layers.MaxPooling2D(),
+    layers.Conv2D(64, 3, activation='relu'),
+    layers.MaxPooling2D(),
+    layers.Dropout(0.5),
+    layers.Flatten(),
+    layers.Dense(64, activation='relu'),
+    layers.Dropout(0.5),
+    layers.Dense(num_classes, activation='softmax')
+])
+
+
+
+# -----------------------------------------------------------------------------------------
+# INICIO DE ENTRENAMIENTO. PARA PROBAR REDES DIFERENTES CAMBIAR : "nombreModelo".compile y "nombreModelo".fit
 # -----------------------------------------------------------------------------------------
 
-modelCNN.compile(
-    optimizer='adam',
+optimizer = Adam(learning_rate=0.001)
+ardu1.compile(
+    optimizer=optimizer,
     loss=tf.losses.SparseCategoricalCrossentropy(from_logits=False),
     metrics=['accuracy'])
 
-history = modelCNN.fit(
+
+early_stop = EarlyStopping(
+    monitor='val_loss',
+    patience=5,
+    restore_best_weights=True
+)
+
+history = ardu1.fit(
     train_ds,
     validation_data=val_ds,
     epochs=epochs
 )
+ardu1.save('laMachin.h5')
 
+# -----------------------------------------------------------------------------------------
+# VISUALIZAMOS LA GRAFICA DEL ENTRENAMIENTO
 # -----------------------------------------------------------------------------------------
 
 acc = history.history['accuracy']
@@ -251,3 +241,19 @@ plt.plot(epochs_range, val_loss, label='Validation Loss')
 plt.legend(loc='upper right')
 plt.title('Training and Validation Loss')
 plt.show()
+
+
+# tensorflowjs_converter --input_format keras laMachin.h5 .\Salida\
+
+
+# -----------------------------------------------------------------------------------------
+# EXPORTAMOS A VERSION TENSORFLOWLITE
+# -----------------------------------------------------------------------------------------
+
+# Convertimos el modelo a formato TensorFlow Lite
+# converter = tf.lite.TFLiteConverter.from_keras_model(modelCNN)
+# tflite_model = converter.convert()
+
+# # Guardamos el modelo en un archivo
+# with open('model.tflite', 'wb') as f:
+#     f.write(tflite_model)

@@ -9,9 +9,9 @@ from pathlib import Path
 # duckduckgo_search(root, "Mariposa", "wing nut", max_results=50)
 
 
-root = Path().cwd()/"/p"
-duckduckgo_search(root, "prueba","lil steel nut", max_results=5)
-duckduckgo_search(root,"prueba", "lil screw", max_results=5)
-duckduckgo_search(root, "prueba","Stainless Steel ", max_results=5)
-duckduckgo_search(root,  "prueba","lil wing nut", max_results=5)
+root = Path().cwd()/"p"
+duckduckgo_search(root, "Tuerca","one steel nut", max_results=200)
+duckduckgo_search(root,"Tornillo", "one screw", max_results=200)
+duckduckgo_search(root, "Arandela","one Stainless Steel ", max_results=200)
+duckduckgo_search(root,  "Mariposa","one wing nut", max_results=200)
 
