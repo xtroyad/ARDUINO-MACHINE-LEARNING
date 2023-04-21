@@ -8,7 +8,7 @@
 #include "model.h"
 
 void setup() {
-    // Variable que se pasará al intérprete para escribir registros
+  // Variable que se pasará al intérprete para escribir registros
   tflite::MicroErrorReporter micro_error_reporter;
   tflite::ErrorReporter* error_reporter = &micro_error_reporter;
 
